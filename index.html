@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro - ONG Asben</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="/style.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="card">
+
+        <div id="tela-sucesso" class="hidden">
+            <div class="success-icon">✓</div>
+            <h2>Cadastro realizado!</h2>
+            <p>Obrigado por se cadastrar na ONG Asben.</p>
+            <button onclick="voltarAoFormulario()">Novo Cadastro</button>
+        </div>
+
+        <form id="cadastroForm">
+            <div class="logo">
+                <div class="logo-dot">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+                    </svg>
+                </div>
+                ONG Asben
+            </div>
+
+            <h1>Cadastro de<br><span>Beneficiário</span></h1>
+            <p class="subtitle">Preencha os dados abaixo para continuar com o cadastro.</p>
+
+            <div class="divider"></div>
+
+            <div class="input-group">
+                <label for="nome">Nome Completo</label>
+                <input type="text" id="nome" placeholder="Ex: Maria da Silva" required>
+            </div>
+
+            <div class="row-2">
+                <div class="input-group">
+                    <label for="cpf">CPF <span style="font-size:.7rem;text-transform:none;letter-spacing:0">(só números)</span></label>
+                    <input type="text" id="cpf" placeholder="00000000000" maxlength="11" required>
+                </div>
+
+                <div class="input-group">
+                    <label>Data de Nascimento</label>
+                    <div class="date-input">
+                        <input type="text" id="inp-dia" placeholder="DD"   maxlength="2">
+                        <span class="date-sep">/</span>
+                        <input type="text" id="inp-mes" placeholder="MM"   maxlength="2">
+                        <span class="date-sep">/</span>
+                        <input type="text" id="inp-ano" placeholder="AAAA" maxlength="4">
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Foto de Perfil <span style="font-size:.7rem;text-transform:none;letter-spacing:0">(opcional)</span></label>
+                <label class="file-label" for="foto">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
+                        <path d="M3 16.5V19a1 1 0 001 1h16a1 1 0 001-1v-2.5M12 3v13m0-13L8.5 6.5M12 3l3.5 3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span id="nome-arquivo">Clique para selecionar uma imagem</span>
+                </label>
+                <input type="file" id="foto" accept="image/*">
+                <div id="preview-wrap">
+                    <img id="preview-img" src="" alt="preview">
+                    <button type="button" id="remover-foto" title="Remover foto">✕</button>
+                </div>
+            </div>
+
+            <button type="submit" id="btn-enviar">CADASTRAR</button>
+        </form>
+    </div>
+
+    <div id="toast"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>

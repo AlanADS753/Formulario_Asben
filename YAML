@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: ong-asben-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: GOOGLE_CREDENTIALS
+        sync: false   # você cola o valor manualmente no painel do Render
+ 
