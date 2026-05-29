@@ -51,9 +51,13 @@ class Database:
         creds = None
 
         token_b64 = os.environ.get("TOKEN_PICKLE")
+        print(f"TOKEN_PICKLE presente: {bool(token_b64)}")
+        print(f"TOKEN_PICKLE tamanho: {len(token_b64) if token_b64 else 0}")
+
         if token_b64:
             try:
                 creds = pickle.loads(base64.b64decode(token_b64))
+                print(f"Token carregado: valid={creds.valid}, expired={creds.expired}")
             except Exception as e:
                 print(f"Erro ao carregar TOKEN_PICKLE: {e}")
                 creds = None
@@ -62,14 +66,20 @@ class Database:
             try:
                 with open('token.pickle', 'rb') as token:
                     creds = pickle.load(token)
+                print("Token carregado do arquivo local")
             except Exception:
                 creds = None
 
         if creds and creds.expired and creds.refresh_token:
             try:
                 creds.refresh(Request())
-            except Exception:
+                print("Token renovado com sucesso")
+            except Exception as e:
+                print(f"Erro ao renovar token: {e}")
                 creds = None
+
+        if not creds:
+            raise Exception("TOKEN_PICKLE inválido ou ausente!")
 
         return creds
 
