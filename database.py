@@ -1,7 +1,11 @@
 import os
 import json
+import pickle
+import base64
 import gspread
 from google.oauth2 import service_account
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
@@ -15,39 +19,58 @@ except ImportError:
 
 class Database:
     def __init__(self):
-        self.scopes = [
-            'https://www.googleapis.com/auth/spreadsheets',
-            'https://www.googleapis.com/auth/drive'
-        ]
+        # Service Account para o Sheets (nunca expira)
+        self.creds_sheets = self._autenticar_sheets()
+        # OAuth2 para o Drive (upload de fotos)
+        self.creds_drive = self._autenticar_drive()
 
-        self.creds = self._autenticar()
-        self.client_sheets = gspread.authorize(self.creds)
-        self.drive_service = build('drive', 'v3', credentials=self.creds)
+        self.client_sheets = gspread.authorize(self.creds_sheets)
+        self.drive_service = build('drive', 'v3', credentials=self.creds_drive)
 
         self.spreadsheet_id = os.environ.get("GOOGLE_SPREADSHEET_ID", "1wq6o7JULyZK1q4fCbzESEviK-el3vVF5o0hOdz7VHYM")
         self.id_pasta_fotos = os.environ.get("GOOGLE_DRIVE_FOLDER_ID", "1VdbHBvyzHB7HZE4jr5lZlaEa5j6JlfJu")
 
         self.sheet = self.client_sheets.open_by_key(self.spreadsheet_id).sheet1
 
-    def _autenticar(self):
-        """
-        Prioridade:
-        1. Variável de ambiente GOOGLE_CREDENTIALS (produção no Render)
-        2. Arquivo service_account.json local (desenvolvimento)
-        """
+    def _autenticar_sheets(self):
+        """Service Account para Google Sheets — nunca expira."""
         env_creds = os.environ.get("GOOGLE_CREDENTIALS")
-
         if env_creds:
-            # Produção: lê as credenciais da variável de ambiente
             info = json.loads(env_creds)
         else:
-            # Desenvolvimento local: lê do arquivo
             with open("service_account.json", "r") as f:
                 info = json.load(f)
 
-        creds = service_account.Credentials.from_service_account_info(
-            info, scopes=self.scopes
+        return service_account.Credentials.from_service_account_info(
+            info,
+            scopes=['https://www.googleapis.com/auth/spreadsheets']
         )
+
+    def _autenticar_drive(self):
+        """OAuth2 para Google Drive — permite upload de fotos."""
+        creds = None
+
+        token_b64 = os.environ.get("TOKEN_PICKLE")
+        if token_b64:
+            try:
+                creds = pickle.loads(base64.b64decode(token_b64))
+            except Exception as e:
+                print(f"Erro ao carregar TOKEN_PICKLE: {e}")
+                creds = None
+
+        if not creds and os.path.exists('token.pickle'):
+            try:
+                with open('token.pickle', 'rb') as token:
+                    creds = pickle.load(token)
+            except Exception:
+                creds = None
+
+        if creds and creds.expired and creds.refresh_token:
+            try:
+                creds.refresh(Request())
+            except Exception:
+                creds = None
+
         return creds
 
     # ── CRUD ─────────────────────────────────────────────────────────────────
@@ -60,7 +83,6 @@ class Database:
             return []
 
     def cadastrar_com_foto(self, nome, cpf, data_nasc, caminho_foto_local=None):
-        """Faz o upload da foto se houver e insere os dados na planilha"""
         try:
             link_foto = "Sem foto"
             if caminho_foto_local and os.path.exists(caminho_foto_local):
@@ -72,7 +94,6 @@ class Database:
             return False, f"Erro ao cadastrar: {str(e)}"
 
     def atualizar_usuario(self, cpf_original, novos_dados):
-        """Busca o usuário pelo CPF e atualiza a linha correspondente"""
         try:
             celula = self.sheet.find(str(cpf_original))
             linha = celula.row
@@ -88,7 +109,6 @@ class Database:
             return False, f"Erro ao atualizar: {str(e)}"
 
     def deletar_usuario(self, cpf):
-        """Busca o usuário pelo CPF e remove a linha da planilha"""
         try:
             celula = self.sheet.find(str(cpf))
             self.sheet.delete_rows(celula.row)
@@ -99,7 +119,6 @@ class Database:
     # ── Helpers ──────────────────────────────────────────────────────────────
 
     def _upload_foto(self, cpf, caminho_local):
-        """Envia o arquivo de imagem para o Google Drive e gera link público"""
         try:
             file_metadata = {
                 'name': f'foto_{cpf}.jpg',
