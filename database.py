@@ -1,10 +1,7 @@
 import os
-import pickle
-import base64
+import json
 import gspread
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
@@ -20,7 +17,7 @@ class Database:
     def __init__(self):
         self.scopes = [
             'https://www.googleapis.com/auth/spreadsheets',
-            'https://www.googleapis.com/auth/drive.file'
+            'https://www.googleapis.com/auth/drive'
         ]
 
         self.creds = self._autenticar()
@@ -35,56 +32,27 @@ class Database:
     def _autenticar(self):
         """
         Prioridade:
-        1. Variável de ambiente TOKEN_PICKLE em base64 (produção no Render)
-        2. Arquivo token.pickle local (desenvolvimento)
-        3. Login via navegador (só funciona local)
+        1. Variável de ambiente GOOGLE_CREDENTIALS (produção no Render)
+        2. Arquivo service_account.json local (desenvolvimento)
         """
-        creds = None
+        env_creds = os.environ.get("GOOGLE_CREDENTIALS")
 
-        # 1. Render: lê o token da variável de ambiente
-        token_b64 = os.environ.get("TOKEN_PICKLE")
-        if token_b64:
-            try:
-                creds = pickle.loads(base64.b64decode(token_b64))
-            except Exception as e:
-                print(f"Erro ao carregar TOKEN_PICKLE: {e}")
-                creds = None
+        if env_creds:
+            # Produção: lê as credenciais da variável de ambiente
+            info = json.loads(env_creds)
+        else:
+            # Desenvolvimento local: lê do arquivo
+            with open("service_account.json", "r") as f:
+                info = json.load(f)
 
-        # 2. Local: lê do arquivo token.pickle
-        if not creds and os.path.exists('token.pickle'):
-            try:
-                with open('token.pickle', 'rb') as token:
-                    creds = pickle.load(token)
-            except Exception:
-                creds = None
-
-        # Renova automaticamente se expirado
-        if creds and creds.expired and creds.refresh_token:
-            try:
-                creds.refresh(Request())
-                # Salva renovado localmente se possível
-                if os.path.exists('token.pickle'):
-                    with open('token.pickle', 'wb') as token:
-                        pickle.dump(creds, token)
-            except Exception:
-                creds = None
-
-        
-        if not creds or not creds.valid:
-            secret_path = os.environ.get("GOOGLE_CLIENT_SECRET_PATH", "client_secret.json")
-            flow = InstalledAppFlow.from_client_secrets_file(
-                secret_path, self.scopes
-            )
-            creds = flow.run_local_server(port=0)
-            with open('token.pickle', 'wb') as token:
-                pickle.dump(creds, token)
-
+        creds = service_account.Credentials.from_service_account_info(
+            info, scopes=self.scopes
+        )
         return creds
 
     # ── CRUD ─────────────────────────────────────────────────────────────────
 
     def listar_usuarios(self):
-        
         try:
             return self.sheet.get_all_records()
         except Exception as e:
