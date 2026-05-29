@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000";
+const API_URL = "https://cadastro-asben.onrender.com";
 
         const form        = document.getElementById('cadastroForm');
         const telaSucesso = document.getElementById('tela-sucesso');
